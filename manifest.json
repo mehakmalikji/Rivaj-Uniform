@@ -1,0 +1,48 @@
+
+{
+  "name": "Rivaj Uniform",
+  "short_name": "Rivaj Uniform",
+  "description": "A smart cloth inventory and sales management app.",
+  "id": "/?source=pwa",
+  "start_url": ".",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "https://www.gstatic.com/images/branding/product/1x/google_gemini_128dp.png",
+      "type": "image/png",
+      "sizes": "128x128"
+    },
+    {
+      "src": "https://www.gstatic.com/images/branding/product/1x/google_gemini_256dp.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://www.gstatic.com/images/branding/product/1x/google_gemini_256dp.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://via.placeholder.com/1080x1920.png?text=Inventory+Dashboard",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Main inventory dashboard view."
+    },
+    {
+      "src": "https://via.placeholder.com/1080x1920.png?text=Sales+Report",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Detailed sales reports and analytics."
+    }
+  ]
+}

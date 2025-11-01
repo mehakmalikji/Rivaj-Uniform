@@ -1,0 +1,6 @@
+
+{
+  "name": "Rivaj Uniform",
+  "description": "A real-time inventory management application for a clothing store, built with React and Tailwind CSS. It features live data synchronization, category and item management, sales logging, and reporting.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-axl" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rivaj Uniform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase V8.10.1 (for Realtime Database) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <!-- React & ReactDOM UMDs -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <!-- Babel for in-browser JSX/TS transpilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" href="https://www.gstatic.com/images/branding/product/1x/google_gemini_256dp.png">
+    <meta name="theme-color" id="theme-color-meta" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+      :root {
+        --accent-100: #e0e7ff;
+        --accent-500: #6366f1;
+        --accent-600: #4f46e5;
+        --accent-700: #4338ca;
+        --accent-800: #3730a3;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        font-family: 'Poppins', sans-serif;
+      }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "@capacitor/cli": "https://aistudiocdn.com/@capacitor/cli@^7.4.4"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:to-slate-800">
+    <div id="root"></div>
+
+    <script type="text/babel" data-presets="react,typescript">
+      const { useState, useEffect, useMemo, useCallback, useRef } = React;
+
+      // --- TYPES ---
+      /*
+      interface InventoryItem {
+        size: number;
+        qty: number;
+        cp: number;
+        price: number;
+      }
+      type InventoryData = Record<string, InventoryItem[]>;
+      interface SalesLog {
+        cat: string;
+        size: number;
+        qty: number;
+        cp: number;
+        sp: number; // Sale Price
+        date: number; // timestamp
+      }
+      */
+      
+      // --- CONSTANTS ---
+      const shortCodeMap = {
+          'BP': 'Black Pant', 'BS': 'Blue Shirt', 'DP': 'Denzy Pant', 'DWS': 'Denzy White Shirt',
+          'HGP': 'Hajvery Grey Pant', 'HWS': 'Hajvery White Shirt', 'LSP': 'Local Sabz Pant',
+          'SPN': 'Sabz Pant Nobel', 'WBP': 'Waist Black Pant'
+      };
+      const CATEGORY_COLORS = {
+          'Black Pant': 'bg-gradient-to-br from-gray-700 to-gray-900',
+          'Blue Shirt': 'bg-gradient-to-br from-blue-500 to-cyan-400',
+          'Denzy Pant': 'bg-gradient-to-br from-slate-500 to-slate-700',
+          'Denzy White Shirt': 'bg-gradient-to-br from-sky-400 to-blue-300',
+          'Hajvery Grey Pant': 'bg-gradient-to-br from-orange-400 to-amber-500',
+          'Hajvery White Shirt': 'bg-gradient-to-br from-cyan-300 to-sky-400',
+          'Local Sabz Pant': 'bg-gradient-to-br from-teal-500 to-cyan-600',
+          'Sabz Pant Nobel': 'bg-gradient-to-br from-emerald-500 to-green-600',
+          'Waist Black Pant': 'bg-gradient-to-br from-black to-gray-800',
+          'default': 'bg-gradient-to-br from-indigo-500 to-purple-600'
+      };
+      const getCategoryColor = (categoryName) => CATEGORY_COLORS[categoryName] || CATEGORY_COLORS['default'];
+      const getHeaderTextColor = (categoryName) => 'text-white';
+      
+      const firebaseConfig = {
+          apiKey: "AIzaSyBY4Wg_vMMpYJ5luQ96WiLPM1YiYHvHOKA",
+          authDomain: "rivajuniformapppha.firebaseapp.com",
+          databaseURL: "https://rivajuniformapppha-default-rtdb.firebaseio.com",
+          projectId: "rivajuniformapppha",
+          storageBucket: "rivajuniformapppha.firebaseapp.com",
+          messagingSenderId: "739260893621",
+          appId: "1:739260893621:android:e3a79q5adceb594a5b71fc"
+      };
+
+      const ACCENT_COLORS = {
+        indigo: { '100': '#e0e7ff', '500': '#6366f1', '600': '#4f46e5', '700': '#4338ca', '800': '#3730a3' },
+        sky: { '100': '#e0f2fe', '500': '#0ea5e9', '600': '#0284c7', '700': '#0369a1', '800': '#075985' },
+        amber: { '100': '#fef3c7', '500': '#f59e0b', '600': '#d97706', '700': '#b45309', '800': '#92400e' },
+        emerald: { '100': '#d1fae5', '500': '#10b981', '600': '#059669', '700': '#047857', '800': '#065f46' },
+        rose: { '100': '#ffe4e6', '500': '#f43f5e', '600': '#e11d48', '700': '#be123c', '800': '#9f1239' },
+      };
+
+      // --- COMPONENTS ---
+
+      const Modal = ({ isOpen, onClose, title, children }) => {
+          if (!isOpen) return null;
+          return (
+              <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 backdrop-blur-sm" onClick={onClose}>
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl w-full max-w-lg p-6 animate-bounce-in" onClick={(e) => e.stopPropagation()}>
+                      <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">{title}</h3>
+                      {children}
+                  </div>
+                  <style>{`
+                      @keyframes bounce-in { 0% { opacity: 0; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
+                      .animate-bounce-in { animation: bounce-in 0.3s ease-out; }
+                  `}</style>
+              </div>
+          );
+      };
+
+      const ActionButtonModal = ({ onClick, className, children }) => (
+          <button onClick={onClick} className={`px-6 py-2 rounded-lg font-semibold text-white transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg ${className}`}>
+              {children}
+          </button>
+      );
+
+      const AddCategoryWithItemsModal = ({ isOpen, onClose, onAddCategoryWithItems }) => {
+          const [name, setName] = useState('');
+          const [items, setItems] = useState([{ size: '', qty: '', cp: '' }]);
+
+          const handleItemChange = (index, field, value) => {
+              const newItems = [...items];
+              newItems[index][field] = value;
+              setItems(newItems);
+          };
+
+          const handleAddRow = () => {
+              setItems([...items, { size: '', qty: '', cp: '' }]);
+          };
+
+          const handleRemoveRow = (index) => {
+              const newItems = items.filter((_, i) => i !== index);
+              setItems(newItems);
+          };
+          
+          const resetState = () => {
+              setName('');
+              setItems([{ size: '', qty: '', cp: '' }]);
+              onClose();
+          };
+
+          const handleSave = () => {
+              if (!name.trim()) {
+                  alert('Please enter a category name.');
+                  return;
+              }
+
+              const validItems = items
+                  .map(item => ({
+                      size: parseInt(item.size, 10),
+                      qty: parseInt(item.qty, 10),
+                      cp: parseInt(item.cp, 10),
+                  }))
+                  .filter(item => item.size > 0 && !isNaN(item.qty) && !isNaN(item.cp))
+                  .map(item => ({ ...item, price: item.cp }));
+
+              const sizes = new Set();
+              for (const item of validItems) {
+                  if (sizes.has(item.size)) {
+                      alert(`Duplicate size ${item.size} found. Please use unique sizes.`);
+                      return;
+                  }
+                  sizes.add(item.size);
+              }
+
+              onAddCategoryWithItems(name.trim(), validItems);
+              resetState();
+          };
+
+          return (
+              <Modal isOpen={isOpen} onClose={resetState} title="➕ Add New Category & Items">
+                  <div className="space-y-4 text-left">
+                      <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Category Name (e.g., White Qameez)" className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-500)]" />
+                      <div className="max-h-60 overflow-y-auto space-y-2 p-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/50">
+                          {items.map((item, index) => (
+                              <div key={index} className="flex items-center gap-2">
+                                  <input type="number" placeholder="Size" value={item.size} onChange={e => handleItemChange(index, 'size', e.target.value)} className="w-1/3 p-2 bg-white dark:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-[var(--accent-500)]" />
+                                  <input type="number" placeholder="Qty" value={item.qty} onChange={e => handleItemChange(index, 'qty', e.target.value)} className="w-1/3 p-2 bg-white dark:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-[var(--accent-500)]" />
+                                  <input type="number" placeholder="CP" value={item.cp} onChange={e => handleItemChange(index, 'cp', e.target.value)} className="w-1/3 p-2 bg-white dark:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-[var(--accent-500)]" />
+                                  <button onClick={() => handleRemoveRow(index)} className="text-red-500 hover:text-red-700 p-1 rounded-full disabled:opacity-50" disabled={items.length <= 1}>
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" /></svg>
+                                  </button>
+                              </div>
+                          ))}
+                      </div>
+                      <button onClick={handleAddRow} className="w-full py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors text-sm">+ Add Row</button>
+                  </div>
+                  <div className="flex gap-4 justify-center mt-6">
+                      <ActionButtonModal onClick={resetState} className="bg-gray-500 hover:bg-gray-600">Cancel</ActionButtonModal>
+                      <ActionButtonModal onClick={handleSave} className="bg-[var(--accent-600)] hover:bg-[var(--accent-700)]">✅ Save</ActionButtonModal>
+                  </div>
+              </Modal>
+          );
+      };
+
+      const CategoryFilterModal = ({ isOpen, onClose, categories, onFilterSelect }) => (
+          <Modal isOpen={isOpen} onClose={onClose} title="🗂️ Filter by Category">
+               <div className="max-h-64 overflow-y-auto my-4 space-y-2 p-1">
+                   <button onClick={() => onFilterSelect('ALL')} className="w-full py-2 bg-[var(--accent-600)] text-white rounded-lg font-bold hover:bg-[var(--accent-500)] transition-colors duration-200">👀 Show All</button>
+                  {categories.sort().map(cat => (<button key={cat} onClick={() => onFilterSelect(cat)} className="w-full py-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200">{cat}</button>))}
+               </div>
+               <ActionButtonModal onClick={onClose} className="mt-2 bg-gray-500 hover:bg-gray-600">Close</ActionButtonModal>
+          </Modal>
+      );
+
+      const ConfirmationModal = ({ message, onConfirm, onCancel }) => (
+           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 backdrop-blur-sm" onClick={onCancel}>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl w-full max-w-sm p-6 animate-bounce-in" onClick={(e) => e.stopPropagation()}>
+                  <p className="text-gray-700 dark:text-gray-300 mb-6 text-left">{message}</p>
+                  <div className="flex justify-end gap-4">
+                       <ActionButtonModal onClick={onCancel} className="bg-gray-500 hover:bg-gray-600">Cancel</ActionButtonModal>
+                       <ActionButtonModal onClick={onConfirm} className="bg-red-600 hover:bg-red-700">✅ Confirm</ActionButtonModal>
+                  </div>
+              </div>
+          </div>
+      );
+
+      const Toast = ({ message }) => (
+          <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg animate-fade-in-out dark:bg-gray-200 dark:text-gray-900 font-semibold">
+              {message}
+               <style>{`@keyframes fade-in-out { 0%, 100% { opacity: 0; transform: translate(-50%, 20px); } 10%, 90% { opacity: 1; transform: translate(-50%, 0); } } .animate-fade-in-out { animation: fade-in-out 3s ease-in-out forwards; }`}</style>
+          </div>
+      );
+      
+      const SettingsModal = ({ isOpen, onClose, theme, setTheme, accent, setAccent }) => {
+          const themeOptions = [{ id: 'light', name: 'Light' }, { id: 'dark', name: 'Dark' }, { id: 'system', name: 'System' }];
+          const accentOptions = Object.keys(ACCENT_COLORS);
+          return (
+              <Modal isOpen={isOpen} onClose={onClose} title="⚙️ App Settings">
+                  <div className="space-y-6 text-left">
+                      <div>
+                          <label className="font-semibold text-gray-700 dark:text-gray-300">Theme</label>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">"System" automatically matches your device's theme.</p>
+                          <div className="flex gap-2 mt-1 rounded-lg bg-gray-100 dark:bg-gray-700 p-1">
+                              {themeOptions.map(option => (<button key={option.id} onClick={() => setTheme(option.id)} className={`flex-1 py-1.5 text-sm font-semibold rounded-md transition-colors ${theme === option.id ? 'bg-[var(--accent-600)] text-white shadow' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>{option.name}</button>))}
+                          </div>
+                      </div>
+                       <div>
+                          <label className="font-semibold text-gray-700 dark:text-gray-300">Accent Color</label>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Choose a color for buttons and highlights.</p>
+                          <div className="flex gap-3 mt-2">
+                              {accentOptions.map(color => (<button key={color} onClick={() => setAccent(color)} style={{ backgroundColor: ACCENT_COLORS[color]['500'] }} className={`w-8 h-8 rounded-full transition-transform transform hover:scale-110 ${accent === color ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-800 ring-[var(--accent-500)]' : ''}`}></button>))}
+                          </div>
+                      </div>
+                  </div>
+                   <ActionButtonModal onClick={onClose} className="mt-8 bg-gray-500 hover:bg-gray-600">Close</ActionButtonModal>
+              </Modal>
+          );
+      };
+      
+      const LimitStockPanel = ({ isVisible, inventory }) => {
+          const limitedStockItems = useMemo(() => {
+              const result = {};
+              Object.keys(inventory).sort().forEach(category => {
+                  const lowStock = (inventory[category] || []).filter(item => item.qty <= 2).sort((a,b) => a.size - b.size);
+                  if (lowStock.length > 0) result[category] = lowStock.map(item => ({ size: item.size, qty: item.qty }));
+              });
+              return result;
+          }, [inventory]);
+          const hasLimitedStock = Object.keys(limitedStockItems).length > 0;
+          return (
+              <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isVisible ? 'max-h-96 opacity-100 my-4' : 'max-h-0 opacity-0'}`}>
+                  <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 p-4 rounded-2xl shadow-lg">
+                      <h3 className="text-xl font-bold text-amber-600 dark:text-amber-500 mb-3">⚠️ Limit Stock (Qty ≤ 2)</h3>
+                      {!hasLimitedStock ? (
+                          <p className="text-emerald-600 dark:text-emerald-500">✅ No items are in limited stock.</p>
+                      ) : (
+                          <div className="space-y-3 text-sm max-h-64 overflow-y-auto pr-2">
+                              {Object.entries(limitedStockItems).map(([category, items]) => (
+                                  <div key={category} className="bg-gray-50 dark:bg-gray-700/50 p-2 rounded-md border border-gray-200 dark:border-gray-700">
+                                      <h4 className="font-semibold text-amber-700 dark:text-amber-400">{category}</h4>
+                                      <ul className="list-disc list-inside pl-2 text-gray-600 dark:text-gray-400">
+                                          {items.map(item => (<li key={item.size}>(Size {item.size}) → Qty: <span className="font-bold text-gray-800 dark:text-gray-200">{item.qty}</span></li>))}
+                                      </ul>
+                                  </div>
+                              ))}
+                          </div>
+                      )}
+                  </div>
+              </div>
+          );
+      };
+
+      const SalesReportPanel = ({ isVisible, salesLogs, onClearSales }) => {
+          const generateCSV = (logs) => {
+              if (!logs || logs.length === 0) return '';
+              const headers = 'Date,Category,Size,Quantity,CP,Total CP Value';
+              const rows = logs.map(log => {
+                  const date = new Date(log.date).toLocaleString();
+                  const total = log.qty * log.cp;
+                  return `"${date}","${log.cat}",${log.size},${log.qty},${log.cp},${total}`;
+              });
+              return [headers, ...rows].join('\n');
+          };
+          const downloadCSV = (csvContent, filename) => {
+              const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+              const link = document.createElement('a');
+              const url = URL.createObjectURL(blob);
+              link.setAttribute('href', url);
+              link.setAttribute('download', filename);
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+          };
+          const shareReport = async (csvContent, title) => {
+              if (!navigator.share) return alert('Sharing is not supported on this browser.');
+              const blob = new Blob([csvContent], { type: 'text/csv' });
+              const file = new File([blob], `${title}.csv`, { type: 'text/csv' });
+              try { await navigator.share({ title, text: `Sales Report: ${title}`, files: [file] }); } catch (error) { console.error('Error sharing:', error); }
+          };
+          const StatLine = ({ label, pieces, amount, colorClass }) => (
+              <div className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2"><span className={`w-3 h-3 rounded-full ${colorClass}`}></span><span className="font-medium text-gray-600 dark:text-gray-300">{label}:</span></div>
+                  <div><span className="font-semibold text-gray-800 dark:text-gray-200">{pieces} pcs</span> | <span className="font-bold text-[var(--accent-600)] dark:text-[var(--accent-500)]">Rs. {amount.toLocaleString()}</span></div>
+              </div>
+          );
+          const reports = useMemo(() => {
+              const now = new Date();
+              const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+              const sevenDaysAgo = startOfToday - 6 * 24 * 60 * 60 * 1000;
+              const thirtyDaysAgo = startOfToday - 29 * 24 * 60 * 60 * 1000;
+              const allLogs = salesLogs || [];
+              const calculateStats = logs => logs.reduce((acc, log) => { acc.pieces += log.qty; acc.amount += log.qty * log.cp; return acc; }, { pieces: 0, amount: 0 });
+              return {
+                  today: { logs: allLogs.filter(l => l.date >= startOfToday), stats: calculateStats(allLogs.filter(l => l.date >= startOfToday)) },
+                  sevenDays: { logs: allLogs.filter(l => l.date >= sevenDaysAgo), stats: calculateStats(allLogs.filter(l => l.date >= sevenDaysAgo)) },
+                  thirtyDays: { logs: allLogs.filter(l => l.date >= thirtyDaysAgo), stats: calculateStats(allLogs.filter(l => l.date >= thirtyDaysAgo)) },
+                  allTime: { logs: allLogs, stats: calculateStats(allLogs) },
+              };
+          }, [salesLogs]);
+          const groupedLogs = useMemo(() => {
+              const groups = {};
+              [...(salesLogs || [])].sort((a, b) => b.date - a.date).forEach(log => {
+                  const date = new Date(log.date), today = new Date(), yesterday = new Date();
+                  yesterday.setDate(yesterday.getDate() - 1);
+                  let key = date.toDateString() === today.toDateString() ? 'Today' : date.toDateString() === yesterday.toDateString() ? 'Yesterday' : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+                  if (!groups[key]) groups[key] = [];
+                  groups[key].push(log);
+              });
+              return groups;
+          }, [salesLogs]);
+          const handleAction = useCallback((action, period) => {
+              const reportData = reports[period];
+              if (!reportData || reportData.logs.length === 0) return;
+              const csv = generateCSV(reportData.logs);
+              const filename = `Rivaj-SalesReport-${period}-${new Date().toISOString().split('T')[0]}.csv`;
+              action === 'download' ? downloadCSV(csv, filename) : shareReport(csv, `Rivaj Sales Report - ${period}`);
+          }, [reports]);
+          return (
+              <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isVisible ? 'max-h-[1000px] opacity-100 my-4' : 'max-h-0 opacity-0'}`}>
+                  <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 p-4 rounded-2xl shadow-lg">
+                      <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-xl font-bold text-[var(--accent-700)] dark:text-[var(--accent-500)]">📊 Sales Report (CP Value)</h3>
+                          <button onClick={onClearSales} className="px-3 py-1 bg-red-500 text-white rounded-md text-xs font-semibold hover:bg-red-600 transition-colors">🗑️ Clear Log</button>
+                      </div>
+                      <div className="space-y-2 mb-4">
+                          <StatLine label="Today's Sales" pieces={reports.today.stats.pieces} amount={reports.today.stats.amount} colorClass="bg-emerald-500" />
+                          <StatLine label="Last 7 Days" pieces={reports.sevenDays.stats.pieces} amount={reports.sevenDays.stats.amount} colorClass="bg-amber-500" />
+                          <StatLine label="Last 30 Days" pieces={reports.thirtyDays.stats.pieces} amount={reports.thirtyDays.stats.amount} colorClass="bg-sky-500" />
+                      </div>
+                      <div className="my-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <h4 className="font-semibold text-[var(--accent-600)] dark:text-[var(--accent-500)] mb-2">Export & Share</h4>
+                          <div className="space-y-2 text-sm">
+                              {Object.keys(reports).map(key => (
+                                  <div key={key} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 p-2 rounded-md border border-gray-200 dark:border-gray-700">
+                                      <span className="font-medium text-gray-700 dark:text-gray-300 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()} Report</span>
+                                      <div className="flex gap-2">
+                                          <button onClick={() => handleAction('download', key)} disabled={!reports[key] || reports[key].logs.length === 0} className="px-2 py-1 text-xs bg-sky-600 text-white rounded hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed">Download</button>
+                                          <button onClick={() => handleAction('share', key)} disabled={!reports[key] || reports[key].logs.length === 0} className="px-2 py-1 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">Share</button>
+                                      </div>
+                                  </div>
+                              ))}
+                          </div>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto pr-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <h4 className="font-semibold text-[var(--accent-600)] dark:text-[var(--accent-500)] mb-2">Recent Sales Log</h4>
+                          {Object.keys(groupedLogs).length === 0 ? <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No sales recorded yet.</p> :
+                              <div className="space-y-3 text-sm">
+                                  {Object.entries(groupedLogs).map(([date, logs]) => (
+                                     <div key={date}>
+                                          <p className="font-bold text-gray-500 dark:text-gray-400 text-xs mb-1">{date}</p>
+                                          {logs.map((log, index) => (
+                                              <div key={index} className="bg-gray-50 dark:bg-gray-700/50 p-2 rounded-md border border-gray-200 dark:border-gray-700 mb-1">
+                                                  <p className="font-semibold text-gray-800 dark:text-gray-200">{log.qty} pcs of {log.cat} (Size: {log.size})</p>
+                                                  <div className="flex justify-between items-center text-xs mt-1">
+                                                      <span className="text-[var(--accent-600)] dark:text-[var(--accent-500)] font-bold">Total CP: Rs. {(log.qty * log.cp).toLocaleString()}</span>
+                                                      <span className="text-gray-500 dark:text-gray-400">{new Date(log.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                  </div>
+                                              </div>
+                                          ))}
+                                     </div>
+                                  ))}
+                              </div>
+                          }
+                      </div>
+                  </div>
+              </div>
+          );
+      };
+
+      const Header = ({ inventory, isOnline, syncStatus, hasPendingWrites, lastSyncInfo }) => {
+          const SyncStatusIndicator = ({ syncStatus, hasPendingWrites, lastSyncInfo }) => {
+              const getStatusIndicator = () => {
+                  switch (syncStatus) {
+                      case 'syncing': return { icon: '🔄', text: 'Syncing...', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' };
+                      case 'synced': return { icon: '✅', text: 'Synced', color: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' };
+                      case 'offline': return { icon: '🔌', text: hasPendingWrites ? 'Changes Pending' : 'Offline', color: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' };
+                      case 'error': return { icon: '⚠️', text: 'Sync Error!', color: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' };
+                      default: return { icon: '⏳', text: 'Initializing...', color: 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300' };
+                  }
+              };
+              const status = getStatusIndicator();
+              const title = `Status: ${status.text}`;
+              return (
+                   <div className="flex flex-col items-center justify-center text-center">
+                      <div className="flex items-center gap-2" title={title}>
+                          <span className={`px-3 py-1.5 text-xs font-semibold rounded-full flex items-center gap-1.5 ${status.color}`}>
+                              <span className={`${syncStatus === 'syncing' ? 'animate-spin' : ''}`}>{status.icon}</span>
+                              <span className="hidden sm:inline">{status.text}</span>
+                          </span>
+                      </div>
+                      {lastSyncInfo && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                            Last scan: {new Date(lastSyncInfo.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ({lastSyncInfo.type})
+                        </div>
+                      )}
+                  </div>
+              );
+          };
+          const AnimatedStatItem = ({ icon, label, value, prefix = '' }) => {
+              const [displayValue, setDisplayValue] = useState(value);
+              const prevValueRef = useRef(value);
+              useEffect(() => {
+                  const startValue = prevValueRef.current;
+                  const endValue = value;
+                  let startTime = null;
+                  const animateCount = (timestamp) => {
+                      if (!startTime) startTime = timestamp;
+                      const progress = Math.min((timestamp - startTime) / 400, 1);
+                      setDisplayValue(Math.floor(startValue + (endValue - startValue) * progress));
+                      if (progress < 1) requestAnimationFrame(animateCount);
+                      else { setDisplayValue(endValue); prevValueRef.current = endValue; }
+                  };
+                  requestAnimationFrame(animateCount);
+                  return () => { prevValueRef.current = value; };
+              }, [value]);
+              return (
+                  <div className="flex items-center gap-2">
+                      <span className="text-xl text-[var(--accent-500)]">{icon}</span>
+                      <div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
+                          <div className="text-md font-bold text-gray-800 dark:text-gray-200">{prefix}{displayValue.toLocaleString()}</div>
+                      </div>
+                  </div>
+              );
+          };
+          const { totalPieces, totalCP } = useMemo(() => {
+              let pieces = 0, cp = 0;
+              for (const category in inventory) {
+                  (inventory[category] || []).forEach(item => { pieces += item.qty; cp += item.qty * item.cp; });
+              }
+              return { totalPieces: pieces, totalCP: cp };
+          }, [inventory]);
+          
+          return (
+              <div className="mb-6">
+                  <div className="mb-6 p-6 rounded-2xl bg-gradient-to-tr from-[var(--accent-600)] to-[var(--accent-800)] text-white shadow-xl shadow-[var(--accent-500)]/30 transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]">
+                      <h1 className="text-xl md:text-3xl font-bold text-center" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                          Rivaj Uniform
+                      </h1>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200/50 dark:divide-gray-700/50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+                      <div className="flex justify-center items-center p-4">
+                          <SyncStatusIndicator syncStatus={syncStatus} hasPendingWrites={hasPendingWrites} lastSyncInfo={lastSyncInfo} />
+                      </div>
+                      <div className="flex justify-center items-center p-4">
+                          <AnimatedStatItem icon="📦" label="Total Pieces" value={totalPieces} />
+                      </div>
+                      <div className="flex justify-center items-center p-4">
+                          <AnimatedStatItem icon="💰" label="Total CP Value" value={totalCP} prefix="Rs. " />
+                      </div>
+                  </div>
+              </div>
+          );
+      };
+
+      const ActionBar = ({ 
+        onAddCategory, 
+        onFilterCategory, 
+        onLimitStockToggle,
+        onSalesReportToggle,
+        onOpenSettings, 
+        inventory, 
+        onInstallApp, 
+        canInstall, 
+        onForceSync 
+      }) => {
+          const ActionButton = ({ icon, text, onClick, className, disabled = false, title, badge }) => (
+              <button onClick={onClick} disabled={disabled} title={title} className={`relative flex-1 min-w-[130px] flex items-center justify-center gap-2 px-4 py-2 text-white rounded-lg shadow-md active:scale-95 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none ${className}`}>
+                  <span>{icon}</span><span>{text}</span>
+                  {badge > 0 && <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">{badge}</span>}
+              </button>
+          );
+          const limitCount = useMemo(() => {
+              let count = 0;
+              Object.values(inventory).forEach(items => { if (items) items.forEach(item => { if(item.qty <= 2) count++; }); });
+              return count;
+          }, [inventory]);
+          
+          return (
+              <div className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-3 rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 mb-6`}>
+                  <div className="flex flex-wrap justify-center gap-3">
+                      {canInstall && <ActionButton icon="📥" text="Install App" onClick={onInstallApp} className="bg-gradient-to-br from-teal-400 to-teal-600" title="Install the app on your device for quick access" />}
+                      <ActionButton icon="🔄" text="Manual Scan" onClick={onForceSync} className="bg-gradient-to-br from-blue-400 to-blue-600" title="Manually sync data with the cloud" />
+                      <ActionButton icon="🗂️" text="Filter" onClick={onFilterCategory} className="bg-gradient-to-br from-purple-400 to-purple-600" />
+                      <ActionButton icon="📉" text="Limit Stock" onClick={onLimitStockToggle} className="bg-gradient-to-br from-amber-400 to-amber-600" badge={limitCount} />
+                      <ActionButton icon="📊" text="Sales Report" onClick={onSalesReportToggle} className="bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-700)]" />
+                      <ActionButton icon="➕" text="New Category" onClick={onAddCategory} className="bg-gradient-to-br from-emerald-400 to-emerald-600" />
+                      <ActionButton icon="⚙️" text="Settings" onClick={onOpenSettings} className="bg-gradient-to-br from-gray-500 to-gray-700" />
+                  </div>
+              </div>
+          );
+      };
+
+      const SearchBox = ({ searchQuery, setSearchQuery, inventory, shortCodeMap }) => {
+          const sortedCodes = useMemo(() => Object.keys(shortCodeMap).sort(), [shortCodeMap]);
+          
+          return (
+              <div className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-4 rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50`}>
+                  <div className="relative">
+                       <span className="absolute inset-y-0 left-0 flex items-center pl-3"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" /></svg></span>
+                      <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search (e.g., BP22 or pant 22)" className="w-full pl-10 pr-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-500)] focus:border-transparent placeholder-gray-500 dark:placeholder-gray-400" />
+                  </div>
+                  <details className="mt-3 text-sm group">
+                      <summary className="font-semibold text-[var(--accent-600)] cursor-pointer list-none flex justify-between items-center">
+                          <span>View Minimal Short Codes</span><span className="transition-transform duration-200 group-open:rotate-180">▼</span>
+                      </summary>
+                      <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg">
+                          <p className="font-bold mb-2 text-gray-600 dark:text-gray-300">Format: `CODE+SIZE` (e.g., BP22)</p>
+                          <ul className="columns-2 sm:columns-3 list-none p-0 m-0 gap-x-4">
+                              {sortedCodes.map(code => { const categoryName = shortCodeMap[code]; const categoryExists = inventory[categoryName] !== undefined; return (<li key={code} className={`mb-1 ${categoryExists ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}`}><span className="font-bold">{code}:</span> {categoryName}</li>)})}
+                          </ul>
+                      </div>
+                  </details>
+              </div>
+          );
+      };
+      
+      const CategoryCard = ({ 
+          categoryName, 
+          items, 
+          onUpdateItem, 
+          onAddItem, 
+          onDeleteCategory, 
+          animationIndex,
+          selectedItems,
+          onToggleSelectItem,
+          onToggleSelectAll,
+          onBulkUpdate
+      }) => {
+          const ItemRow = ({ item, categoryName, onUpdate, isLowStock, isSelected, onToggleSelect }) => {
+              const [localQty, setLocalQty] = useState(item.qty.toString());
+              const [localCp, setLocalCp] = useState(item.cp.toString());
+              const [localSize, setLocalSize] = useState(item.size.toString());
+              useEffect(() => { setLocalQty(item.qty.toString()); setLocalCp(item.cp.toString()); setLocalSize(item.size.toString()); }, [item]);
+              const handleBlur = () => {
+                  const numSize = parseInt(localSize, 10), numQty = parseInt(localQty, 10), numCp = parseInt(localCp, 10);
+                  const updatedFields = {}; let hasChanges = false;
+                  if (!isNaN(numSize) && numSize > 0 && numSize !== item.size) { updatedFields.size = numSize; hasChanges = true; }
+                  if (!isNaN(numQty) && numQty !== item.qty) { updatedFields.qty = numQty; hasChanges = true; }
+                  if (!isNaN(numCp) && numCp !== item.cp) { updatedFields.cp = numCp; updatedFields.price = numCp; hasChanges = true; }
+                  if (hasChanges) { onUpdate(categoryName, item.size, updatedFields, item); } else { setLocalSize(item.size.toString()); setLocalQty(item.qty.toString()); setLocalCp(item.cp.toString()); }
+              };
+              const totalValue = item.qty * item.cp;
+              const inputStyle = "w-full p-1.5 text-center bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-500)] text-gray-800 dark:text-gray-200";
+              const rowClasses = [
+                  'transition-colors',
+                  isSelected ? 'bg-[var(--accent-100)]/80 dark:bg-[var(--accent-800)]/30' : '',
+                  isLowStock && item.qty >= 0 ? 'bg-orange-50 dark:bg-orange-900/20' : ''
+              ].join(' ');
+
+              return (
+                  <tr className={rowClasses} data-size={item.size}>
+                      <td className="p-2 align-middle text-center">
+                          <input 
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => onToggleSelect(item.size)}
+                              className="form-checkbox h-5 w-5 text-[var(--accent-600)] bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-[var(--accent-500)]"
+                          />
+                      </td>
+                      <td className="p-2 align-middle"><input type="number" value={localSize} onChange={e => setLocalSize(e.target.value)} onBlur={handleBlur} className={inputStyle} /></td>
+                      <td className={`p-2 align-middle ${item.qty < 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' : ''}`}><input type="number" value={localQty} onChange={e => setLocalQty(e.target.value)} onBlur={handleBlur} className={inputStyle} /></td>
+                      <td className="p-2 align-middle"><input type="number" value={localCp} onChange={e => setLocalCp(e.target.value)} onBlur={handleBlur} className={inputStyle} /></td>
+                      <td className="p-2 align-middle text-center font-semibold text-[var(--accent-600)] dark:text-[var(--accent-500)]">{totalValue.toLocaleString()}</td>
+                  </tr>
+              );
+          };
+          
+          const AddItemRow = ({ categoryName, onAdd }) => {
+              const [size, setSize] = useState(''), [qty, setQty] = useState(''), [cp, setCp] = useState('');
+              const handleAdd = () => {
+                  const numSize = parseInt(size, 10), numQty = parseInt(qty, 10), numCp = parseInt(cp, 10);
+                  if (numSize > 0 && !isNaN(numQty) && !isNaN(numCp)) {
+                      onAdd(categoryName, { size: numSize, qty: numQty, cp: numCp, price: numCp });
+                      setSize(''); setQty(''); setCp('');
+                  } else { alert('Please enter valid numbers for Size (>0), Qty, and CP.'); }
+              };
+              const inputStyle = "p-1.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400";
+              return (
+                  <tr>
+                      <td colSpan={5} className="p-2 bg-gray-50 dark:bg-gray-800/50">
+                          <div className="flex items-center gap-2">
+                              <input type="number" value={size} onChange={e => setSize(e.target.value)} placeholder="Size" className={`w-1/4 ${inputStyle}`} />
+                              <input type="number" value={qty} onChange={e => setQty(e.target.value)} placeholder="Qty" className={`w-1/4 ${inputStyle}`} />
+                              <input type="number" value={cp} onChange={e => setCp(e.target.value)} placeholder="CP" className={`w-1/4 ${inputStyle}`} />
+                              <button onClick={handleAdd} className="w-1/4 bg-emerald-600 text-white p-1.5 rounded-md text-sm font-semibold hover:bg-emerald-500 transition-colors duration-200 active:scale-95">➕ Add</button>
+                          </div>
+                      </td>
+                  </tr>
+              );
+          };
+
+          const BulkEditPanel = ({ numSelected, onBulkUpdate, onClearSelection }) => {
+              const [newQty, setNewQty] = useState('');
+              const [newCp, setNewCp] = useState('');
+
+              const handleApply = () => {
+                  onBulkUpdate(categoryName, newQty, newCp);
+                  setNewQty('');
+                  setNewCp('');
+              };
+
+              return (
+                  <div className="bg-gray-100 dark:bg-gray-700/50 p-3 border-t border-gray-200 dark:border-gray-700">
+                      <p className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-2">{numSelected} items selected</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                          <input type="number" value={newQty} onChange={e => setNewQty(e.target.value)} placeholder="New Qty" className="flex-grow p-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent-500)]" />
+                          <input type="number" value={newCp} onChange={e => setNewCp(e.target.value)} placeholder="New CP" className="flex-grow p-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent-500)]" />
+                          <button onClick={handleApply} className="flex-grow bg-[var(--accent-600)] text-white p-1.5 rounded-md text-sm font-semibold hover:bg-[var(--accent-700)] transition-colors">Apply Changes</button>
+                          <button onClick={onClearSelection} className="flex-grow bg-gray-500 text-white p-1.5 rounded-md text-sm font-semibold hover:bg-gray-600 transition-colors">Clear Selection</button>
+                      </div>
+                  </div>
+              );
+          };
+          
+          const sortedItems = items ? [...items].sort((a, b) => a.size - b.size) : [];
+          const isEmpty = !items || items.length === 0;
+          const { totalPieces, totalValue } = useMemo(() => {
+              if (isEmpty) return { totalPieces: 0, totalValue: 0 };
+              return items.reduce((acc, item) => { acc.totalPieces += item.qty; acc.totalValue += item.qty * item.cp; return acc; }, { totalPieces: 0, totalValue: 0 });
+          }, [items, isEmpty]);
+          
+          const selectedSet = selectedItems[categoryName] || new Set();
+          const numSelected = selectedSet.size;
+          const areAllSelected = !isEmpty && sortedItems.length === numSelected;
+
+          const selectAllCheckboxRef = useRef(null);
+          useEffect(() => {
+              if (selectAllCheckboxRef.current) {
+                  selectAllCheckboxRef.current.indeterminate = numSelected > 0 && !areAllSelected;
+              }
+          }, [numSelected, areAllSelected]);
+
+          const colorClass = getCategoryColor(categoryName), textColorClass = getHeaderTextColor(categoryName);
+          const cardRef = useRef(null), [isVisible, setIsVisible] = useState(false);
+          useEffect(() => {
+              const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) { setIsVisible(true); observer.unobserve(entry.target); } }, { threshold: 0.1 });
+              if (cardRef.current) observer.observe(cardRef.current);
+              return () => { if (cardRef.current) observer.unobserve(cardRef.current); };
+          }, []);
+          
+          return (
+              <div ref={cardRef} style={{ transitionDelay: `${animationIndex * 75}ms` }} className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 overflow-hidden transition-all duration-500 ease-in-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>
+                  <h2 className={`flex justify-between items-center p-3 font-bold text-lg ${colorClass} ${textColorClass}`}>
+                      <div style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+                          {categoryName}
+                          <div className="text-xs font-normal opacity-90">{totalPieces} pcs | Rs. {totalValue.toLocaleString()}</div>
+                      </div>
+                      <button onClick={() => onDeleteCategory(categoryName)} disabled={!isEmpty} title={isEmpty ? "Delete this category" : "Cannot delete category with items"} className={`px-2 py-1 text-xs font-semibold rounded-md transition-opacity duration-200 ${isEmpty ? 'bg-red-500/80 hover:bg-red-500 text-white' : 'bg-gray-400/50 text-gray-100 cursor-not-allowed'}`}>🗑️</button>
+                  </h2>
+                  <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                          <thead className="text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50">
+                            <tr className="border-b border-gray-200 dark:border-gray-700">
+                              <th className="p-2 w-12 text-center">
+                                  <input 
+                                      type="checkbox"
+                                      ref={selectAllCheckboxRef}
+                                      checked={areAllSelected}
+                                      onChange={() => onToggleSelectAll(categoryName, sortedItems.map(i => i.size))}
+                                      disabled={isEmpty}
+                                      className="form-checkbox h-5 w-5 text-[var(--accent-600)] bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-[var(--accent-500)]"
+                                  />
+                              </th>
+                              <th className="p-2 text-center font-semibold tracking-wider">Size</th>
+                              <th className="p-2 text-center font-semibold tracking-wider">Qty</th>
+                              <th className="p-2 text-center font-semibold tracking-wider">CP</th>
+                              <th className="p-2 text-center font-semibold tracking-wider">Total CP</th>
+                          </tr></thead>
+                          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                              {sortedItems.map((item) => <ItemRow key={item.size} item={item} categoryName={categoryName} onUpdate={onUpdateItem} isLowStock={item.qty <= 2} isSelected={selectedSet.has(item.size)} onToggleSelect={onToggleSelectItem} />)}
+                              <AddItemRow categoryName={categoryName} onAdd={onAddItem} />
+                          </tbody>
+                      </table>
+                  </div>
+                  {numSelected > 0 && (
+                      <BulkEditPanel 
+                          numSelected={numSelected}
+                          onBulkUpdate={onBulkUpdate}
+                          onClearSelection={() => onToggleSelectAll(categoryName, sortedItems.map(i => i.size))}
+                      />
+                  )}
+              </div>
+          );
+      };
+
+      // --- MAIN APP COMPONENT ---
+      
+      const LoadingScreen = () => (
+          <div className="fixed inset-0 bg-gray-100 dark:bg-gray-900 flex flex-col justify-center items-center z-50 transition-opacity duration-300">
+              <div className="relative w-24 h-24 flex justify-center items-center">
+                   <div className="absolute w-full h-full rounded-full bg-[var(--accent-500)] opacity-20 animate-ping"></div>
+                   <div className="bg-white dark:bg-gray-800 rounded-full w-20 h-20 flex justify-center items-center shadow-lg">
+                      <span className="text-[var(--accent-600)] text-4xl font-bold font-serif select-none">NR</span>
+                   </div>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 mt-4 text-lg font-semibold animate-pulse tracking-wider">Loading Inventory...</p>
+          </div>
+      );
+
+      const OfflineBanner = ({ isOnline }) => (
+          <div className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out ${isOnline ? '-translate-y-full' : 'translate-y-0'}`}>
+              <div className="bg-amber-500 text-white text-center p-2 text-sm font-semibold shadow-lg flex items-center justify-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+                  <span>You are currently offline. Changes are saved locally and will sync automatically.</span>
+              </div>
+          </div>
+      );
+
+      const App = () => {
+          const [inventory, setInventory] = useState({});
+          const [salesLogs, setSalesLogs] = useState([]);
+          const [searchQuery, setSearchQuery] = useState('');
+          const [activeCategoryFilter, setActiveCategoryFilter] = useState('ALL');
+          const [isOnline, setIsOnline] = useState(true);
+          const [syncStatus, setSyncStatus] = useState('idle');
+          const [isLoading, setIsLoading] = useState(true);
+          const [hasPendingWrites, setHasPendingWrites] = useState(false);
+          const [isLimitStockPanelVisible, setLimitStockPanelVisible] = useState(false);
+          const [isSalesReportPanelVisible, setSalesReportPanelVisible] = useState(false);
+          const [isAddCategoryModalOpen, setAddCategoryModalOpen] = useState(false);
+          const [isFilterModalOpen, setFilterModalOpen] = useState(false);
+          const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
+          const [confirmation, setConfirmation] = useState(null);
+          const [toastMessage, setToastMessage] = useState(null);
+          const [theme, setTheme] = useState(localStorage.getItem('app-theme') || 'system');
+          const [accent, setAccent] = useState(localStorage.getItem('app-accent') || 'indigo');
+          const [installPromptEvent, setInstallPromptEvent] = useState(null);
+          const [lastSyncInfo, setLastSyncInfo] = useState(null);
+          const [selectedItems, setSelectedItems] = useState({});
+          const dbRefs = useRef(null);
+          const connectionDebounceTimer = useRef(null);
+          
+          const firebase = window.firebase;
+          
+          useEffect(() => {
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js').then(function(registration) {
+                  console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }).catch(function(err) {
+                  console.log('ServiceWorker registration failed: ', err);
+                });
+              }
+          }, []);
+
+          useEffect(() => {
+              const handleBeforeInstallPrompt = (event) => {
+                  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || window.navigator.userAgent.includes('WebView')) {
+                      return;
+                  }
+                  event.preventDefault();
+                  setInstallPromptEvent(event);
+              };
+              window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+              return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+          }, []);
+          
+          useEffect(() => {
+              const root = window.document.documentElement;
+              const applyCurrentTheme = () => {
+                  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                  root.classList.toggle('dark', isDark);
+                  document.getElementById('theme-color-meta')?.setAttribute('content', isDark ? '#111827' : '#ffffff');
+              };
+              applyCurrentTheme();
+              localStorage.setItem('app-theme', theme);
+              const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+              const handleSystemThemeChange = () => { if (theme === 'system') applyCurrentTheme(); };
+              mediaQuery.addEventListener('change', handleSystemThemeChange);
+              return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
+          }, [theme]);
+          
+          useEffect(() => {
+              const root = window.document.documentElement;
+              const colors = ACCENT_COLORS[accent];
+              Object.keys(colors).forEach(key => root.style.setProperty(`--accent-${key}`, colors[key]));
+              localStorage.setItem('app-accent', accent);
+          }, [accent]);
+          
+          const showToast = useCallback((message, duration = 3000) => {
+              setToastMessage(message);
+              setTimeout(() => setToastMessage(null), duration);
+          }, []);
+          
+          useEffect(() => {
+              if (syncStatus === 'synced') {
+                  setLastSyncInfo(currentLastSyncInfo => {
+                      const isRecentManualSync = currentLastSyncInfo && currentLastSyncInfo.type === 'manual' && (Date.now() - currentLastSyncInfo.time < 2000);
+                      if (!isRecentManualSync) {
+                          return { time: Date.now(), type: 'auto' };
+                      }
+                      return currentLastSyncInfo;
+                  });
+              }
+          }, [syncStatus]);
+
+          useEffect(() => {
+              const loadAndConnect = async () => {
+                  let initialInventory = {};
+                  let initialSales = [];
+      
+                  // --- STAGE 1: LOAD INITIAL DATA FOR OFFLINE ---
+                  // Priority: localStorage -> bundled data -> empty state.
+                  try {
+                      const cachedInventory = localStorage.getItem('cachedInventory');
+                      if (cachedInventory) {
+                          initialInventory = JSON.parse(cachedInventory);
+                      }
+                      const cachedSales = localStorage.getItem('cachedSales');
+                      if (cachedSales) {
+                          initialSales = JSON.parse(cachedSales);
+                      }
+                  } catch (e) {
+                      console.error("Failed to parse localStorage data, clearing it.", e);
+                      localStorage.removeItem('cachedInventory');
+                      localStorage.removeItem('cachedSales');
+                  }
+                  
+                  // If localStorage is empty, try loading bundled data (for first-time offline launch)
+                  if (Object.keys(initialInventory).length === 0) {
+                      try {
+                          const response = await fetch('./initial_data.json');
+                          if (response.ok) {
+                              const data = await response.json();
+                              initialInventory = data.categories || {};
+                              initialSales = Object.values(data.salesLogs || {});
+                              // Pre-populate localStorage for the next offline launch
+                              localStorage.setItem('cachedInventory', JSON.stringify(initialInventory));
+                              localStorage.setItem('cachedSales', JSON.stringify(initialSales));
+                          }
+                      } catch (e) {
+                          console.error("Could not load initial bundled data.", e);
+                      }
+                  }
+                  
+                  setInventory(initialInventory);
+                  setSalesLogs(initialSales);
+      
+                  // --- STAGE 2: HIDE LOADING SCREEN & CONNECT TO FIREBASE ---
+                  setIsLoading(false);
+      
+                  // Now, connect to Firebase for live updates.
+                  if (!firebase.apps.length) {
+                      firebase.initializeApp(firebaseConfig);
+                  }
+                  const db = firebase.database();
+      
+                  const onConnectedValue = (snapshot) => {
+                      const connected = snapshot.val() === true;
+                      clearTimeout(connectionDebounceTimer.current);
+                      if (connected) {
+                          setIsOnline(currentIsOnline => {
+                              if (!currentIsOnline) {
+                                  showToast("🟢 Back online. Syncing changes...", 4000);
+                                  setSyncStatus('syncing');
+                                  setTimeout(() => { setSyncStatus('synced'); setHasPendingWrites(false); }, 2000);
+                              } else {
+                                  setSyncStatus(currentSyncStatus => currentSyncStatus !== 'syncing' ? 'synced' : 'syncing');
+                              }
+                              return true;
+                          });
+                      } else {
+                          connectionDebounceTimer.current = setTimeout(() => {
+                              setIsOnline(false);
+                              setSyncStatus('offline');
+                              showToast("🔌 You are offline. Changes are being saved locally.", 4000);
+                          }, 3000);
+                      }
+                  };
+      
+                  const inventoryRef = db.ref("categories");
+                  const salesRef = db.ref("salesLogs");
+                  const connectedRef = db.ref(".info/connected");
+      
+                  dbRefs.current = { inventory: inventoryRef, sales: salesRef, connected: connectedRef };
+      
+                  // --- STAGE 3: SET UP LIVE LISTENERS ---
+                  connectedRef.on("value", onConnectedValue);
+      
+                  inventoryRef.on("value", (snapshot) => {
+                      const inventoryData = snapshot.val() || {};
+                      Object.keys(inventoryData).forEach(key => { if (!Array.isArray(inventoryData[key])) { inventoryData[key] = []; } });
+                      setInventory(inventoryData);
+                      try {
+                          localStorage.setItem('cachedInventory', JSON.stringify(inventoryData));
+                      } catch (e) { console.error("Failed to cache inventory to localStorage", e); }
+                      setSyncStatus('synced');
+                  }, (error) => {
+                      console.error("Firebase inventory read failed:", error);
+                      setSyncStatus('error');
+                  });
+      
+                  salesRef.on("value", (snapshot) => {
+                      const salesData = snapshot.val() || {};
+                      const salesArray = Object.values(salesData);
+                      setSalesLogs(salesArray);
+                      try {
+                          localStorage.setItem('cachedSales', JSON.stringify(salesArray));
+                      } catch (e) { console.error("Failed to cache sales logs to localStorage", e); }
+                  });
+              };
+      
+              loadAndConnect();
+      
+              return () => {
+                  if (dbRefs.current) {
+                      dbRefs.current.inventory.off();
+                      dbRefs.current.sales.off();
+                      if (dbRefs.current.connected && dbRefs.current.connected.off) {
+                         dbRefs.current.connected.off("value");
+                      }
+                  }
+                  clearTimeout(connectionDebounceTimer.current);
+              };
+          }, [showToast]);
+
+          const handleUpdateItem = useCallback((category, originalSize, updatedFields, oldItem) => {
+              if (updatedFields.size && updatedFields.size !== originalSize) {
+                  if ((inventory[category] || []).some(item => item.size === updatedFields.size)) {
+                      showToast(`⚠️ Size ${updatedFields.size} already exists in ${category}.`);
+                      return;
+                  }
+              }
+              if (!isOnline) setHasPendingWrites(true);
+              setSyncStatus('syncing');
+
+              const categoryRef = dbRefs.current.inventory.child(category);
+              categoryRef.transaction((currentItems) => {
+                  if (!Array.isArray(currentItems)) {
+                      return; 
+                  }
+                  
+                  const items = [...currentItems];
+                  const itemIndex = items.findIndex(i => i.size === originalSize);
+                  
+                  if (itemIndex === -1) {
+                      return; 
+                  }
+                  
+                  if (updatedFields.size && updatedFields.size !== originalSize && items.some(item => item.size === updatedFields.size)) {
+                      return; 
+                  }
+
+                  const updatedItem = { ...items[itemIndex], ...updatedFields };
+
+                  if (updatedItem.qty === 0 && updatedItem.cp === 0) {
+                      items.splice(itemIndex, 1);
+                  } else {
+                      items[itemIndex] = updatedItem;
+                  }
+                  
+                  return items.length > 0 ? items : null;
+              }).then(result => {
+                  if (!result.committed) {
+                      showToast("⚠️ Update conflict. Please refresh and try again.");
+                      return;
+                  }
+                  
+                  if (!oldItem) {
+                      showToast(`✅ ${category} updated.`);
+                      return;
+                  }
+
+                  let soldQty = 0;
+                  if (updatedFields.qty !== undefined && updatedFields.qty < oldItem.qty) {
+                      soldQty = oldItem.qty - updatedFields.qty;
+                  }
+
+                  if (soldQty > 0) {
+                      const newSaleLog = {
+                          cat: category,
+                          size: updatedFields.size || originalSize,
+                          qty: soldQty,
+                          cp: oldItem.cp,
+                          sp: oldItem.price,
+                          date: Date.now()
+                      };
+                      dbRefs.current.sales.push(newSaleLog);
+                      
+                      const finalItems = result.snapshot.val();
+                      const itemWasRemoved = !Array.isArray(finalItems) || !finalItems.some(i => i.size === (updatedFields.size || originalSize));
+
+                      if (itemWasRemoved) {
+                          showToast(`✅ ${soldQty} pcs of ${category} sold & item removed.`);
+                      } else {
+                          showToast(`✅ ${soldQty} pcs of ${category} (Size ${newSaleLog.size}) sold.`);
+                      }
+                  } else if (updatedFields.qty === 0 && updatedFields.cp === 0) {
+                      showToast(`🗑️ Item (Size: ${originalSize}) removed from ${category}.`);
+                  } else {
+                      showToast(`✅ ${category} (Size ${originalSize}) updated.`);
+                  }
+              }).catch(e => {
+                  console.error("Firebase update transaction failed", e);
+                  setSyncStatus('error');
+                  showToast("❌ Cloud update failed. Change not saved.", 4000);
+              });
+          }, [inventory, isOnline, showToast]);
+
+          const handleAddItem = useCallback((category, newItem) => {
+              if((inventory[category] || []).some(item => item.size === newItem.size)) {
+                  showToast(`⚠️ Size ${newItem.size} already exists in ${category}.`); return;
+              }
+              if (!isOnline) setHasPendingWrites(true);
+              setSyncStatus('syncing');
+
+              const categoryRef = dbRefs.current.inventory.child(category);
+              categoryRef.transaction((currentItems) => {
+                  const items = Array.isArray(currentItems) ? currentItems : [];
+                  if (items.some(item => item.size === newItem.size)) return;
+                  items.push(newItem);
+                  return items;
+              }).then(result => {
+                  if (result.committed) showToast(`✅ New item added to ${category}.`);
+                  else showToast(`⚠️ Size ${newItem.size} already exists in ${category}. (Conflict)`);
+              }).catch(e => {
+                  console.error("Firebase add item failed", e);
+                  setSyncStatus('error');
+                  showToast("❌ Cloud update failed. Change not saved.", 4000);
+              });
+          }, [inventory, isOnline, showToast]);
+
+          const handleAddCategoryWithItems = useCallback((categoryName, items) => {
+              if (Object.keys(inventory).some(key => key.toLowerCase() === categoryName.toLowerCase())) {
+                  showToast(`⚠️ Category "${categoryName}" already exists!`);
+                  return;
+              }
+              
+              setInventory(prev => ({ ...prev, [categoryName]: items }));
+              if (!isOnline) setHasPendingWrites(true);
+              setSyncStatus('syncing');
+
+              const dataToSet = items.length > 0 ? items : true;
+
+              dbRefs.current.inventory.child(categoryName).set(dataToSet)
+                  .then(() => showToast(`✅ New category "${categoryName}" added with ${items.length} items.`))
+                  .catch(e => {
+                      console.error("Firebase add category failed", e);
+                      setSyncStatus('error');
+                      showToast("❌ Cloud update failed. Change not saved.", 4000);
+                      setInventory(prev => {
+                          const newInventory = { ...prev };
+                          delete newInventory[categoryName];
+                          return newInventory;
+                      });
+                  });
+          }, [inventory, isOnline, showToast]);
+
+          const handleDeleteCategory = useCallback((categoryName) => {
+              if (inventory[categoryName] && inventory[categoryName].length > 0) {
+                  showToast(`⚠️ Cannot delete "${categoryName}" as it's not empty.`); return;
+              }
+              setConfirmation({ message: `Are you sure you want to permanently delete "${categoryName}"?`, onConfirm: () => {
+                  if (!isOnline) setHasPendingWrites(true);
+                  setConfirmation(null);
+                  if (activeCategoryFilter === categoryName) setActiveCategoryFilter('ALL');
+                  setSyncStatus('syncing');
+                  dbRefs.current.inventory.child(categoryName).remove()
+                      .then(() => showToast(`🗑️ Category "${categoryName}" has been deleted.`))
+                      .catch(e => {
+                          console.error("Firebase delete failed", e);
+                          setSyncStatus('error');
+                          showToast("❌ Cloud update failed. Change not saved.", 4000);
+                      });
+              }});
+          }, [inventory, activeCategoryFilter, isOnline, showToast]);
+          
+          const handleClearSales = useCallback(() => {
+              setConfirmation({ message: "Are you sure you want to clear the entire sales log?", onConfirm: () => {
+                  if (!isOnline) setHasPendingWrites(true);
+                  setConfirmation(null);
+                  setSyncStatus('syncing');
+                  dbRefs.current.sales.remove()
+                      .then(() => showToast("🗑️ Sales log has been cleared."))
+                      .catch(e => {
+                          console.error("Firebase sales clear failed", e);
+                          setSyncStatus('error');
+                          showToast("❌ Could not clear sales log.", 3000);
+                      });
+              }});
+          }, [isOnline, showToast]);
+
+          const handleInstallApp = async () => {
+              if (!installPromptEvent) { showToast("App cannot be installed right now."); return; }
+              installPromptEvent.prompt();
+              const { outcome } = await installPromptEvent.userChoice;
+              showToast(outcome === 'accepted' ? '✅ App installed!' : '👍 Installation dismissed.');
+              setInstallPromptEvent(null);
+          };
+          
+          const handleForceSync = () => {
+              showToast("🔄 Manually scanning...", 2000);
+              setSyncStatus('syncing');
+              setTimeout(() => {
+                  setSyncStatus('synced');
+                  setHasPendingWrites(false);
+                  setLastSyncInfo({ time: Date.now(), type: 'manual' });
+                  showToast("✅ Scan complete!", 2000);
+              }, 1500);
+          };
+
+          const handleToggleSelectItem = useCallback((category, size) => {
+              setSelectedItems(prev => {
+                  const newSelection = { ...prev };
+                  const categorySelection = new Set(newSelection[category]);
+                  if (categorySelection.has(size)) {
+                      categorySelection.delete(size);
+                  } else {
+                      categorySelection.add(size);
+                  }
+
+                  if (categorySelection.size === 0) {
+                      delete newSelection[category];
+                  } else {
+                      newSelection[category] = categorySelection;
+                  }
+                  return newSelection;
+              });
+          }, []);
+
+          const handleToggleSelectAll = useCallback((category, allItemSizes) => {
+              setSelectedItems(prev => {
+                  const newSelection = { ...prev };
+                  const categorySelection = new Set(newSelection[category]);
+                  const allSelected = allItemSizes.every(size => categorySelection.has(size)) && allItemSizes.length > 0;
+                  
+                  if (allSelected) {
+                      delete newSelection[category];
+                  } else {
+                      newSelection[category] = new Set(allItemSizes);
+                  }
+                  return newSelection;
+              });
+          }, []);
+          
+          const handleBulkUpdateItems = useCallback((category, newQty, newCp) => {
+              const itemsToUpdate = selectedItems[category];
+              if (!itemsToUpdate || itemsToUpdate.size === 0) return;
+
+              const qtyUpdate = newQty.trim() === '' ? null : parseInt(newQty, 10);
+              const cpUpdate = newCp.trim() === '' ? null : parseInt(newCp, 10);
+
+              if ((qtyUpdate === null || isNaN(qtyUpdate)) && (cpUpdate === null || isNaN(cpUpdate))) {
+                  showToast("⚠️ Please enter a valid number for Qty or CP.");
+                  return;
+              }
+
+              if (!isOnline) setHasPendingWrites(true);
+              setSyncStatus('syncing');
+
+              const categoryRef = dbRefs.current.inventory.child(category);
+              categoryRef.transaction((currentItems) => {
+                  if (!Array.isArray(currentItems)) return;
+                  
+                  return currentItems.map(item => {
+                      if (itemsToUpdate.has(item.size)) {
+                          const updatedItem = { ...item };
+                          if (qtyUpdate !== null && !isNaN(qtyUpdate)) updatedItem.qty = qtyUpdate;
+                          if (cpUpdate !== null && !isNaN(cpUpdate)) {
+                              updatedItem.cp = cpUpdate;
+                              updatedItem.price = cpUpdate;
+                          }
+                          return updatedItem;
+                      }
+                      return item;
+                  });
+              }).then(result => {
+                  if (result.committed) {
+                      showToast(`✅ Bulk updated ${itemsToUpdate.size} items in ${category}.`);
+                      handleToggleSelectAll(category, []);
+                  } else {
+                      showToast("⚠️ Bulk update failed. Please try again.");
+                  }
+              }).catch(e => {
+                  console.error("Firebase bulk update transaction failed", e);
+                  setSyncStatus('error');
+                  showToast("❌ Cloud update failed. Change not saved.", 4000);
+              });
+          }, [selectedItems, isOnline, showToast, handleToggleSelectAll]);
+
+
+          const handleLimitStockToggle = useCallback(() => setLimitStockPanelVisible(prev => !prev), []);
+          const handleSalesReportToggle = useCallback(() => setSalesReportPanelVisible(prev => !prev), []);
+          const handleAddCategory = useCallback(() => setAddCategoryModalOpen(true), []);
+          const handleFilterCategory = useCallback(() => setFilterModalOpen(true), []);
+          const handleOpenSettings = useCallback(() => setSettingsModalOpen(true), []);
+          
+          const filteredInventory = useMemo(() => {
+            const sourceInventory = activeCategoryFilter === 'ALL'
+                ? inventory
+                : { [activeCategoryFilter]: inventory[activeCategoryFilter] };
+
+            const query = searchQuery.trim().toLowerCase();
+            if (!query) return sourceInventory;
+
+            const codeToNameMap = Object.entries(shortCodeMap).reduce((acc, [code, name]) => {
+                acc[code.toLowerCase()] = name;
+                return acc;
+            }, {});
+
+            const terms = query.split(/\s+/).filter(Boolean);
+            
+            const isCodeSearch = terms.some(term => /^([a-z]+)(\d+)$/.test(term));
+
+            if (isCodeSearch) {
+                const codeResults = {};
+                terms.forEach(term => {
+                    const match = term.match(/^([a-z]+)(\d+)$/);
+                    if (match) {
+                        const code = match[1];
+                        const size = parseInt(match[2], 10);
+                        const categoryName = codeToNameMap[code];
+
+                        if (categoryName && sourceInventory[categoryName]) {
+                            const matchedItem = sourceInventory[categoryName].find(item => item.size === size);
+                            if (matchedItem) {
+                                if (!codeResults[categoryName]) codeResults[categoryName] = [];
+                                if (!codeResults[categoryName].some(i => i.size === size)) {
+                                    codeResults[categoryName].push(matchedItem);
+                                }
+                            }
+                        }
+                    }
+                });
+                return codeResults;
+            }
+            
+            const textParts = terms.filter(t => isNaN(parseInt(t, 10)));
+            const sizeParts = terms.map(t => parseInt(t, 10)).filter(n => !isNaN(n));
+            const textQuery = textParts.join(' ');
+
+            return Object.entries(sourceInventory).reduce((acc, [category, items]) => {
+                if (category.toLowerCase().includes(textQuery)) {
+                    let itemsToInclude = items;
+                    if (sizeParts.length > 0) {
+                        itemsToInclude = items.filter(item => sizeParts.includes(item.size));
+                    }
+                    if (itemsToInclude.length > 0) {
+                        acc[category] = itemsToInclude;
+                    }
+                }
+                return acc;
+            }, {});
+        }, [searchQuery, inventory, activeCategoryFilter, shortCodeMap]);
+
+          if (isLoading) {
+              return <LoadingScreen />;
+          }
+
+          return (
+              <div className="min-h-screen text-gray-900 dark:text-gray-100 transition-colors duration-300">
+                  <OfflineBanner isOnline={isOnline} />
+                  <div className={`pt-12 pb-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 transition-transform duration-300 ${isOnline ? 'translate-y-0' : 'translate-y-8'}`}>
+                      <Header inventory={inventory} isOnline={isOnline} syncStatus={syncStatus} hasPendingWrites={hasPendingWrites} lastSyncInfo={lastSyncInfo} />
+                      <main className="py-2">
+                           <ActionBar
+                              onAddCategory={handleAddCategory}
+                              onFilterCategory={handleFilterCategory}
+                              onLimitStockToggle={handleLimitStockToggle}
+                              onSalesReportToggle={handleSalesReportToggle}
+                              onOpenSettings={handleOpenSettings}
+                              inventory={inventory}
+                              onInstallApp={handleInstallApp}
+                              canInstall={!!installPromptEvent}
+                              onForceSync={handleForceSync}
+                          />
+                          <SearchBox searchQuery={searchQuery} setSearchQuery={setSearchQuery} inventory={inventory} shortCodeMap={shortCodeMap} />
+                          <LimitStockPanel isVisible={isLimitStockPanelVisible} inventory={inventory} />
+                          <SalesReportPanel isVisible={isSalesReportPanelVisible} salesLogs={salesLogs} onClearSales={handleClearSales} />
+                          
+                          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {Object.keys(filteredInventory).length > 0 ? (
+                                Object.keys(filteredInventory).sort().map((category, index) => (
+                                    <CategoryCard
+                                        key={category}
+                                        animationIndex={index}
+                                        categoryName={category}
+                                        items={filteredInventory[category]}
+                                        onUpdateItem={handleUpdateItem}
+                                        onAddItem={handleAddItem}
+                                        onDeleteCategory={handleDeleteCategory}
+                                        selectedItems={selectedItems}
+                                        onToggleSelectItem={(size) => handleToggleSelectItem(category, size)}
+                                        onToggleSelectAll={handleToggleSelectAll}
+                                        onBulkUpdate={handleBulkUpdateItems}
+                                    />
+                                ))
+                            ) : (
+                                <div className="col-span-full text-center py-12 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50">
+                                    <p className="text-gray-500 dark:text-gray-400 text-lg">No items match your search.</p>
+                                </div>
+                            )}
+                          </div>
+                      </main>
+                      <footer className="text-center py-6 mt-8">
+                          <p className="text-sm text-white bg-[var(--accent-600)] rounded-full px-4 py-2 inline-block shadow-inner">
+                              Developer by Ali Haider
+                          </p>
+                      </footer>
+                  </div>
+
+                  <AddCategoryWithItemsModal 
+                      isOpen={isAddCategoryModalOpen} 
+                      onClose={() => setAddCategoryModalOpen(false)} 
+                      onAddCategoryWithItems={handleAddCategoryWithItems}
+                  />
+                  <CategoryFilterModal 
+                      isOpen={isFilterModalOpen} 
+                      onClose={() => setFilterModalOpen(false)} 
+                      categories={Object.keys(inventory)} 
+                      onFilterSelect={(cat) => { setActiveCategoryFilter(cat); setFilterModalOpen(false); }}
+                  />
+                  <SettingsModal 
+                      isOpen={isSettingsModalOpen}
+                      onClose={() => setSettingsModalOpen(false)}
+                      theme={theme} setTheme={setTheme}
+                      accent={accent} setAccent={setAccent}
+                  />
+                  {confirmation && <ConfirmationModal message={confirmation.message} onConfirm={confirmation.onConfirm} onCancel={() => setConfirmation(null)} />}
+                  {toastMessage && <Toast message={toastMessage} />}
+              </div>
+          );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+
+    </script>
+    
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
